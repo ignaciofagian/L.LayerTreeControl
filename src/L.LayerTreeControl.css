@@ -1,0 +1,142 @@
+.layer-tree-control {
+  background-color: white;
+  border: solid 1px gray;
+  max-height: calc(100vh - 55px);
+  overflow-y: auto;
+  min-width: 250px;
+  padding: 8px;
+}
+
+.layer-tree-control .tree-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  margin-left: 2px;
+  margin-top: 2px;
+}
+
+.layer-tree-control .node-header {
+  margin: 3px 0;
+  display: flex;
+  padding: 1px 6px;
+}
+
+.layer-tree-control .leaf-header label span:hover {
+  font-weight: 500;
+}
+
+.layer-tree-control .leaf-header {
+  margin: 3px 0;
+  display: flex;
+  padding: 1px 6px;
+}
+
+.layer-tree-control .leaf-header:hover,
+.layer-tree-control .node-header:hover {
+  background-color: rgba(230, 229, 229, 0.662);
+}
+
+.layer-tree-control .tree-label {
+  line-height: 20px;
+  font-size: 13px;
+}
+
+.layer-tree-control .legend {
+  display: flex;
+  align-items: center;
+}
+
+.layer-tree-control .legend-img {
+  margin-right: 4px;
+  max-height: 25px;
+  max-width: 25px;
+}
+
+.layer-tree-control .legend-list {
+  margin-left: 18px;
+}
+
+.layer-tree-control .legend-list .legend {
+ margin-bottom: 4px;
+}
+
+.layer-tree-control .tree-legend-sm {
+  margin-top: -2.5px;
+}
+
+.layer-tree-control .tree-legend-sm .legend-img {
+  max-height: 20px;
+  max-width: 20px;
+}
+
+/* custom checkbox */
+.layer-tree-control .tree-check {
+  position: relative;
+  padding-left: 22px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  margin: 1.5px 0px;
+}
+
+.layer-tree-control .tree-check input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+  margin-left: -12px;
+}
+
+.layer-tree-control .tree-check:hover input ~ .check-mark {
+  background-color: rgb(243, 243, 243);
+}
+
+.layer-tree-control .tree-check input:checked ~ .check-mark {
+  background-color: #7b7b7bf0;
+}
+
+.layer-tree-control .check-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 14px;
+  width: 14px;
+  background-color: #fafafa;
+  border: solid 1px gray;
+  border-radius: 2px;
+}
+
+.layer-tree-control .check-mark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.layer-tree-control .tree-check input:checked ~ .check-mark:after {
+  display: block;
+}
+
+.layer-tree-control .tree-check .check-mark:after {
+  left: 4.5px;
+  top: 1.3px;
+  width: 3px;
+  height: 7px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+
+/* utility classes */
+.layer-tree-control .hidden {
+  display: none;
+}
+
+.layer-tree-control .space {
+  width: 23px;
+  display: block;
+}

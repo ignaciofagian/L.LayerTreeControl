@@ -1,0 +1,24 @@
+{
+  "name": "leaflet-layer-tree",
+  "version": "1.0.0",
+  "description": "A leaflet plugin to group multiple types of layers in a tree structure",
+  "main": "./src/L.LayerTreeControl.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ignaciofagian/L.LayerTreeControl.git"
+  },
+  "keywords": [
+    "leaflet",
+    "esri-leaflet",
+    "control",
+    "leaflet-layer-tree",
+    "map",
+    "javascript",
+    "leaflet-control"
+  ],
+  "author": "Ignacio Fagian",
+  "license": "MIT"
+}
