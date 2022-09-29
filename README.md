@@ -6,7 +6,7 @@ A leaflet plugin to group multiple types of layers in a tree structure.
 
 ## Demo
 
-  - <https://github.com/ignaciofagian/L.LayerTreeControl/>
+  - <https://ignaciofagian.github.io/L.LayerTreeControl/example>
 
 ## Usage Example
 
