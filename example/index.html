@@ -41,13 +41,7 @@
 				opacity: 0.7,
 				layers: [],
 			});
-
-			var esrilayer2 = L.esri.dynamicMapLayer({
-				url: 'https://sit.mvotma.gub.uy/arcgis/rest/services/SIT/SIT_habitat/MapServer',
-				opacity: 0.7,
-				layers: [],
-			});
-
+      
 			var wmsGlobalPopulation = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms?', {
 				layers: 'gpw-v3:gpw-v3-population-density_2000',
 				transparent: true,
@@ -65,7 +59,6 @@
 					name: '911 Calls hot spot (esri)',
 					type: 'esriDynamic',
 				},
-				{ layer: wmsGlobalPopulation, name: 'Global Population (wms)', type: 'leaflet' },
 				{
 					type: 'leaflet',
 					name: 'Custom tree',

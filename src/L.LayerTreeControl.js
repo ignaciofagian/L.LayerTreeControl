@@ -2,7 +2,7 @@ L.Control.LayerTreeControl = L.Control.extend({
   _map: null,
   _layers: null,
   options: {
-    position: "topright",
+    position: 'topright',
   },
   initialize: function (layers, options) {
     L.Util.setOptions(this, options);
@@ -11,15 +11,17 @@ L.Control.LayerTreeControl = L.Control.extend({
   },
 
   onAdd: function (map) {
-    var container = L.DomUtil.create("div", "layer-tree-control");
-    var treeContainer = L.DomUtil.create("div", "", container);
+    var container = L.DomUtil.create('div', 'layer-tree-control');
+    var treeContainer = L.DomUtil.create('div', '', container);
     var esriProvider = new EsriProvider(map);
     var leafletProvider = new LeafletProvider(map);
 
     this._map = map;
     this._container = container;
-
-    L.DomEvent.on(container, "wheel", L.DomEvent.stopPropagation);
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.on(container, 'dblclick', L.DomEvent.stopPropagation);
+    L.DomEvent.on(container, 'click', L.DomEvent.stopPropagation);
+    L.DomEvent.on(container, 'wheel', L.DomEvent.stopPropagation);
 
     var providers = {
       esri: esriProvider,
@@ -35,16 +37,14 @@ L.Control.LayerTreeControl = L.Control.extend({
       const layerName = layerObj.name;
 
       // esriDynamic type
-      if (layerObj.type === "esriDynamic") {
+      if (layerObj.type === 'esriDynamic') {
         this._map.addLayer(layerObj.layer);
-        esriProvider
-          .getTree(layerId, layerName, layerObj.layer.options)
-          .then(function (layersTree) {
-            treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-          });
+        esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
+          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+        });
       }
       // leaflet type
-      else if (this._layers[i].type === "leaflet") {
+      else if (this._layers[i].type === 'leaflet') {
         var opts = {};
         if (layerObj.children || layerObj.legend) {
           opts.children = layerObj.children;
@@ -54,20 +54,16 @@ L.Control.LayerTreeControl = L.Control.extend({
           opts.layer = layerObj.layer;
         }
 
-        leafletProvider
-          .getTree(layerId, layerName, opts)
-          .then(function (layersTree) {
-            treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-          });
+        leafletProvider.getTree(layerId, layerName, opts).then(function (layersTree) {
+          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+        });
       }
       // esriFeature type
-      else if (layerObj.type === "esriFeature") {
+      else if (layerObj.type === 'esriFeature') {
         this._map.addLayer(layerObj.layer);
-        esriProvider
-          .getTree(layerId, layerName, layerObj.layer.options)
-          .then(function (layersTree) {
-            treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-          });
+        esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
+          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+        });
       }
     }
 
@@ -89,11 +85,7 @@ function LayerManager(layers, providers, map) {
     }
   };
 
-  var turnLayersMultiple = function (
-    layerId,
-    addSubLayersIds,
-    delSubLayersIds
-  ) {
+  var turnLayersMultiple = function (layerId, addSubLayersIds, delSubLayersIds) {
     var main = getLayerById(layerId);
     updateActiveLayers(main, addSubLayersIds, delSubLayersIds);
   };
@@ -105,20 +97,16 @@ function LayerManager(layers, providers, map) {
     }
     var layerNode = document.querySelectorAll('[data-id="' + layerId + '"]')[0];
     var layerChildNode = layerNode.nextElementSibling;
-    var subNode = layerChildNode.querySelectorAll(
-      '[data-id="' + subNodeId + '"]'
-    )[0];
+    var subNode = layerChildNode.querySelectorAll('[data-id="' + subNodeId + '"]')[0];
 
-    var parentId = subNode.getElementsByClassName("check-box")[0].parentId;
-    var parentNode = layerChildNode.querySelectorAll(
-      '[data-id="' + parentId + '"]'
-    )[0];
+    var parentId = subNode.getElementsByClassName('check-box')[0].parentId;
+    var parentNode = layerChildNode.querySelectorAll('[data-id="' + parentId + '"]')[0];
 
     var parentCheckBox;
     if (parentId !== layerId) {
-      parentCheckBox = parentNode.getElementsByClassName("check-box")[0];
+      parentCheckBox = parentNode.getElementsByClassName('check-box')[0];
     } else {
-      parentCheckBox = layerNode.getElementsByClassName("check-box")[0];
+      parentCheckBox = layerNode.getElementsByClassName('check-box')[0];
     }
     parentCheckBox.checked = true;
 
@@ -128,26 +116,21 @@ function LayerManager(layers, providers, map) {
   };
 
   var turnNodeOn = function (layerId, nodeId) {
-    var layerNode = document.querySelectorAll('[data-id="' + layerId + '"]')[0]
-      .nextElementSibling;
+    var layerNode = document.querySelectorAll('[data-id="' + layerId + '"]')[0].nextElementSibling;
     var findInNode;
 
     if (layerId !== nodeId) {
-      findInNode = layerNode.querySelectorAll('[data-id="' + nodeId + '"]')[0]
-        .nextElementSibling;
+      findInNode = layerNode.querySelectorAll('[data-id="' + nodeId + '"]')[0].nextElementSibling;
     } else findInNode = layerNode;
 
-    var allCheckboxes = findInNode.querySelectorAll(".check-box");
+    var allCheckboxes = findInNode.querySelectorAll('.check-box');
 
     var checkState = { [nodeId]: true };
     var layersOn = [];
     var layersOff = [];
     for (var i = 0; i < allCheckboxes.length; i++) {
       var checkbox = allCheckboxes[i];
-      var isLeaf = L.DomUtil.hasClass(
-        checkbox.parentElement.parentElement,
-        "leaf-header"
-      )
+      var isLeaf = L.DomUtil.hasClass(checkbox.parentElement.parentElement, 'leaf-header')
         ? true
         : false;
       if (isLeaf) {
@@ -167,24 +150,19 @@ function LayerManager(layers, providers, map) {
   };
 
   var turnNodeOff = function (layerId, nodeId) {
-    var layerNode = document.querySelectorAll('[data-id="' + layerId + '"]')[0]
-      .nextElementSibling;
+    var layerNode = document.querySelectorAll('[data-id="' + layerId + '"]')[0].nextElementSibling;
     var findInNode;
 
     if (layerId !== nodeId) {
-      findInNode = layerNode.querySelectorAll('[data-id="' + nodeId + '"]')[0]
-        .nextElementSibling;
+      findInNode = layerNode.querySelectorAll('[data-id="' + nodeId + '"]')[0].nextElementSibling;
     } else findInNode = layerNode;
 
-    var allCheckboxes = findInNode.querySelectorAll(".check-box");
+    var allCheckboxes = findInNode.querySelectorAll('.check-box');
     var layersOff = [];
 
     for (var i = 0; i < allCheckboxes.length; i++) {
       var checkbox = allCheckboxes[i];
-      var isLeaf = L.DomUtil.hasClass(
-        checkbox.parentElement.parentElement,
-        "leaf-header"
-      )
+      var isLeaf = L.DomUtil.hasClass(checkbox.parentElement.parentElement, 'leaf-header')
         ? true
         : false;
       if (isLeaf && checkbox.checked) {
@@ -194,23 +172,11 @@ function LayerManager(layers, providers, map) {
     turnLayersMultiple(layerId, [], layersOff);
   };
 
-  var updateActiveLayers = function (
-    layerObj,
-    addSubLayersIds,
-    delSubLayersIds
-  ) {
-    if (layerObj.type === "esriDynamic" || layerObj.type === "esriFeature") {
-      providers.esri.updateActiveLayers(
-        layerObj,
-        addSubLayersIds,
-        delSubLayersIds
-      );
-    } else if (layerObj.type === "leaflet") {
-      providers.leaflet.updateActiveLayers(
-        layerObj,
-        addSubLayersIds,
-        delSubLayersIds
-      );
+  var updateActiveLayers = function (layerObj, addSubLayersIds, delSubLayersIds) {
+    if (layerObj.type === 'esriDynamic' || layerObj.type === 'esriFeature') {
+      providers.esri.updateActiveLayers(layerObj, addSubLayersIds, delSubLayersIds);
+    } else if (layerObj.type === 'leaflet') {
+      providers.leaflet.updateActiveLayers(layerObj, addSubLayersIds, delSubLayersIds);
     }
   };
 
@@ -237,42 +203,39 @@ function LayerManager(layers, providers, map) {
  */
 function TreeLeafUI(layerManager) {
   var addCheckBox = function (node, mainLayerId, container) {
-    var wrapper = L.DomUtil.create("label", "tree-check", container);
-    var checkbox = L.DomUtil.create("input", "check-box", wrapper);
-    var marker = L.DomUtil.create("span", "check-mark", wrapper);
+    var wrapper = L.DomUtil.create('label', 'tree-check', container);
+    var checkbox = L.DomUtil.create('input', 'check-box', wrapper);
+    var marker = L.DomUtil.create('span', 'check-mark', wrapper);
 
-    checkbox.type = "checkbox";
+    checkbox.type = 'checkbox';
     checkbox.itemId = node.id;
     checkbox.parentId = node.parentId !== -1 ? node.parentId : mainLayerId;
     checkbox.value = false;
 
-    L.DomEvent.on(
-      checkbox,
-      "change",
-      function (event) {
+    L.DomEvent.on(checkbox,	'change', function (event) {
         event.stopPropagation();
         var checked = event.target.checked;
         var subLayerIds = [node.id];
 
-        treeExpand(container.parentElement);
-
-        if (node.type === "leaf" && checked) {
+        if (node.type === 'leaf' && checked) {
+          treeExpand(container.parentElement);
           layerManager.turnLayersOn(mainLayerId, subLayerIds);
-        } else if (node.type === "leaf") {
+        } else if (node.type === 'leaf') {
           layerManager.turnLayersOff(mainLayerId, subLayerIds);
-        } else if (node.type === "node" && checked) {
+        } else if (node.type === 'node' && checked) {
+          treeExpand(container.parentElement);
           layerManager.turnNodeOn(mainLayerId, node.id);
         } else {
           layerManager.turnNodeOff(mainLayerId, node.id);
         }
       },
-      this
+      this,
     );
   };
 
   var addLabel = function (title, container) {
-    var label = L.DomUtil.create("label", "tree-label", container);
-    var labelText = L.DomUtil.create("span", "", label);
+    var label = L.DomUtil.create('label', 'tree-label', container);
+    var labelText = L.DomUtil.create('span', '', label);
     labelText.innerHTML = title;
   };
 
@@ -280,16 +243,14 @@ function TreeLeafUI(layerManager) {
     if (legendInfo === undefined) return;
     // legends: Array<{label, data}>
     function createLegend(legend, showLabel, dom, level) {
-      var content = L.DomUtil.create("div", "legend", dom);
+      var content = L.DomUtil.create('div', 'legend', dom);
       addLevelSpace(content, level);
-      var img = L.DomUtil.create("img", "legend-img", content);
-      img.src = legend.imageData
-        ? "data:image/jpeg;base64," + legend.imageData
-        : legend.imageUrl;
-      img.alt = "legend";
+      var img = L.DomUtil.create('img', 'legend-img', content);
+      img.src = legend.imageData ? 'data:image/jpeg;base64,' + legend.imageData : legend.imageUrl;
+      img.alt = 'legend';
 
       if (showLabel) {
-        var label = L.DomUtil.create("span", "legend-label", content);
+        var label = L.DomUtil.create('span', 'legend-label', content);
         label.innerHTML = legend.label;
       }
     }
@@ -297,27 +258,26 @@ function TreeLeafUI(layerManager) {
     var legends = legendInfo;
     var isFromImage = legends.largeImageUrl !== undefined;
     if (isFromImage) {
-
-      var childrenNode = container.getElementsByClassName("tree-children")[0];
-			var content = L.DomUtil.create("div", "legend", childrenNode);
+      var childrenNode = container.getElementsByClassName('tree-children')[0];
+      var content = L.DomUtil.create('div', 'legend', childrenNode);
       addLevelSpace(content, level + 1);
-      var wrapper = L.DomUtil.create("div", "legend-image", content);
+      var wrapper = L.DomUtil.create('div', 'legend-image', content);
 
-      var img = L.DomUtil.create("img", "image", wrapper);
+      var img = L.DomUtil.create('img', 'image', wrapper);
       img.src = legends.largeImageUrl;
     }
     // multiple legend lines
     else if (legends.length > 1) {
-      var childrenNode = container.getElementsByClassName("tree-children")[0];
-      var wrapper = L.DomUtil.create("div", "legend-list", childrenNode);
+      var childrenNode = container.getElementsByClassName('tree-children')[0];
+      var wrapper = L.DomUtil.create('div', 'legend-list', childrenNode);
       for (var i = 0; i < legends.length; i++) {
         createLegend(legends[i], true, wrapper, level + 1);
       }
     }
     // display single legend on same line
     else {
-      var checkBoxNode = container.getElementsByClassName("check-box")[0];
-      var legendSmNode = L.DomUtil.create("div", "tree-legend-sm");
+      var checkBoxNode = container.getElementsByClassName('check-box')[0];
+      var legendSmNode = L.DomUtil.create('div', 'tree-legend-sm');
       // append after
       checkBoxNode.after(legendSmNode);
       createLegend(legends[0], false, legendSmNode, 0);
@@ -325,46 +285,40 @@ function TreeLeafUI(layerManager) {
   };
 
   var addTreeNode = function (container) {
-    var img = L.DomUtil.create("img", "tree-icon", container);
-    img.src = "images/plus.svg";
-    img.alt = "plus";
+    var img = L.DomUtil.create('img', 'tree-icon', container);
+    img.src = 'images/plus.svg';
+    img.alt = 'plus';
   };
 
   var addChildrenContainer = function (container) {
-    var childContainer = L.DomUtil.create(
-      "div",
-      "tree-children hidden",
-      container
-    );
+    var childContainer = L.DomUtil.create('div', 'tree-children hidden', container);
     return childContainer;
   };
 
   var getChildrenContainer = function (nodeId, container) {
-    var headerNode = container.querySelectorAll(
-      '[data-id="' + nodeId + '"]'
-    )[0];
+    var headerNode = container.querySelectorAll('[data-id="' + nodeId + '"]')[0];
     var treeNode = headerNode.parentElement;
-    return treeNode.getElementsByClassName("tree-children")[0];
+    return treeNode.getElementsByClassName('tree-children')[0];
   };
 
   var treeExpand = function (treeNode) {
-    var iconNode = treeNode.getElementsByClassName("tree-icon")[0];
-    var childrenNode = treeNode.getElementsByClassName("tree-children")[0];
+    var iconNode = treeNode.getElementsByClassName('tree-icon')[0];
+    var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
     if (iconNode) {
-      L.DomUtil.removeClass(childrenNode, "hidden");
-      iconNode.src = "images/minus.svg";
+      L.DomUtil.removeClass(childrenNode, 'hidden');
+      iconNode.src = 'images/minus.svg';
     }
   };
 
   var treeCollapse = function (treeNode) {
-    var iconNode = treeNode.getElementsByClassName("tree-icon")[0];
-    var childrenNode = treeNode.getElementsByClassName("tree-children")[0];
-    L.DomUtil.addClass(childrenNode, "hidden");
-    iconNode.src = "images/plus.svg";
+    var iconNode = treeNode.getElementsByClassName('tree-icon')[0];
+    var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
+    L.DomUtil.addClass(childrenNode, 'hidden');
+    iconNode.src = 'images/plus.svg';
   };
 
   var navigateTree = function (mainLayerId, node, container, level = 1) {
-    if (node.type === "leaf") {
+    if (node.type === 'leaf') {
       this.renderLeaf(node, mainLayerId, container, level);
     }
     //
@@ -373,20 +327,14 @@ function TreeLeafUI(layerManager) {
 
       for (var i = 0; i < node.children.length; i++) {
         var childrenContainer = getChildrenContainer(node.id, container);
-        navigateTree.call(
-          this,
-          mainLayerId,
-          node.children[i],
-          childrenContainer,
-          level + 1
-        );
+        navigateTree.call(this, mainLayerId, node.children[i], childrenContainer, level + 1);
       }
     }
   };
 
   var addLevelSpace = function (container, total) {
     for (var i = 1; i < total; i++) {
-      L.DomUtil.create("div", "space", container);
+      L.DomUtil.create('div', 'space', container);
     }
   };
 
@@ -397,12 +345,11 @@ function TreeLeafUI(layerManager) {
     },
 
     renderLeaf: function (node, mainLayerId, container, level) {
-      var leafNode = L.DomUtil.create("div", "tree-layer", container);
-      var leafHeader = L.DomUtil.create("div", "leaf-header", leafNode);
-      leafHeader.setAttribute("data-id", node.id);
+      var leafNode = L.DomUtil.create('div', 'tree-layer', container);
+      var leafHeader = L.DomUtil.create('div', 'leaf-header', leafNode);
+      leafHeader.setAttribute('data-id', node.id);
       var legendInfo = node.legend;
-      var hasMultipleLegends =
-        legendInfo && (legendInfo.length > 1 || legendInfo.largeImageUrl);
+      var hasMultipleLegends = legendInfo && (legendInfo.length > 1 || legendInfo.largeImageUrl);
 
       addLevelSpace(leafHeader, level);
       addCheckBox(node, mainLayerId, leafHeader);
@@ -412,13 +359,14 @@ function TreeLeafUI(layerManager) {
       addLegend(node.legend, leafNode, level);
       addLabel(node.label, leafHeader);
 
-      L.DomEvent.on(leafHeader, "click", function (event) {
+      L.DomEvent.on(leafHeader, 'click', function (event) {
+        event.stopPropagation();
         if (hasMultipleLegends === false) {
-          var checkBoxNode = leafHeader.getElementsByClassName("check-box")[0];
+          var checkBoxNode = leafHeader.getElementsByClassName('check-box')[0];
           var checked = checkBoxNode.checked;
           checkBoxNode.checked = !checked;
 
-          var event = new Event("change");
+          var event = new Event('change');
           checkBoxNode.dispatchEvent(event);
         }
       });
@@ -428,28 +376,27 @@ function TreeLeafUI(layerManager) {
       addTreeNode(leafHeader);
       addChildrenContainer(leafNode);
 
-      L.DomEvent.on(
-        leafHeader,
-        "click",
-        function (event) {
-          if (event.target.classList.contains("check-mark")) {
+      L.DomEvent.on(leafHeader, 'click', function (event) {
+          var isCheckbox;
+          isCheckbox = event.target.classList.contains('check-box');
+          isCheckbox |= event.target.classList.contains('check-mark');
+          if (isCheckbox) {
             return;
           }
           event.stopPropagation();
-          var childrenNode =
-            leafNode.getElementsByClassName("tree-children")[0];
-          var childrenIsHidden = L.DomUtil.hasClass(childrenNode, "hidden");
+          var childrenNode = leafNode.getElementsByClassName('tree-children')[0];
+          var childrenIsHidden = L.DomUtil.hasClass(childrenNode, 'hidden');
           if (childrenIsHidden) treeExpand(leafNode);
           else treeCollapse(leafNode);
         },
-        this
+        this,
       );
     },
 
     renderNode: function (node, mainLayerId, container, level) {
-      var treeNode = L.DomUtil.create("div", "tree-node", container);
-      var treeHeader = L.DomUtil.create("div", "node-header", treeNode);
-      treeHeader.setAttribute("data-id", node.id);
+      var treeNode = L.DomUtil.create('div', 'tree-node', container);
+      var treeHeader = L.DomUtil.create('div', 'node-header', treeNode);
+      treeHeader.setAttribute('data-id', node.id);
 
       addLevelSpace(treeHeader, level);
       addCheckBox(node, mainLayerId, treeHeader);
@@ -457,20 +404,20 @@ function TreeLeafUI(layerManager) {
       addLabel(node.label, treeHeader);
       addChildrenContainer(treeNode);
 
-      L.DomEvent.on(
-        treeHeader,
-        "click",
-        function (event) {
-          if (event.target.classList.contains("check-mark")) {
+      L.DomEvent.on(treeHeader, 'click', function (event) {
+          event.stopPropagation();
+          var isCheckbox;
+          isCheckbox = event.target.classList.contains('check-box');
+          isCheckbox |= event.target.classList.contains('check-mark');
+          if (isCheckbox) {
             return;
           }
-          var childrenNode =
-            treeNode.getElementsByClassName("tree-children")[0];
-          var childrenIsHidden = L.DomUtil.hasClass(childrenNode, "hidden");
+          var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
+          var childrenIsHidden = L.DomUtil.hasClass(childrenNode, 'hidden');
           if (childrenIsHidden) treeExpand(treeNode);
           else treeCollapse(treeNode);
         },
-        this
+        this,
       );
     },
   };
@@ -488,7 +435,7 @@ function EsriProvider(map) {
 
   var getLegend = function (service) {
     return new Promise(function (resolve, reject) {
-      service.get("/legend", {}, function response(err, res) {
+      service.get('/legend', {}, function response(err, res) {
         if (err) reject(err);
         else resolve(res);
       });
@@ -497,7 +444,7 @@ function EsriProvider(map) {
 
   var getInfo = function (service) {
     return new Promise(function (resolve, reject) {
-      service.get("/", {}, function response(err, res) {
+      service.get('/', {}, function response(err, res) {
         if (err) reject(err);
         else resolve(res);
       });
@@ -507,7 +454,7 @@ function EsriProvider(map) {
   var buildNode = function (layerNode) {
     var node = {};
     node.id = layerNode.id;
-    node.type = "node";
+    node.type = 'node';
     node.label = layerNode.name;
     node.children = [];
     node.parentId = layerNode.parentLayerId;
@@ -518,7 +465,7 @@ function EsriProvider(map) {
   var buildLeaf = function (layer, legends) {
     var leaf = {};
     leaf.id = layer.id;
-    leaf.type = "leaf";
+    leaf.type = 'leaf';
     leaf.label = layer.name;
     leaf.legend = legends[layer.id] ? legends[layer.id].legend : null;
     leaf.parentId = layer.parentLayerId;
@@ -571,23 +518,16 @@ function EsriProvider(map) {
     var infoPromise = getInfo(service);
 
     // wait both promises
-    return Promise.all([legendsPromise, infoPromise]).then(function ([
-      legends,
-      info,
-    ]) {
+    return Promise.all([legendsPromise, infoPromise]).then(function ([legends, info]) {
       var layerInfo = {};
-      layerInfo.legends = utils.convertToKeyValue(legends.layers, "layerId");
+      layerInfo.legends = utils.convertToKeyValue(legends.layers, 'layerId');
       layerInfo.subLayers = info.layers;
 
       return layerInfo;
     });
   };
 
-  var updateActiveLayersDynamic = function (
-    layerObj,
-    addSubLayersIds,
-    delSubLayersIds
-  ) {
+  var updateActiveLayersDynamic = function (layerObj, addSubLayersIds, delSubLayersIds) {
     var layer = layerObj.layer;
     var nextLayerIds = layer.getLayers();
 
@@ -602,12 +542,8 @@ function EsriProvider(map) {
     layer.setLayers(nextLayerIds);
   };
 
-  var updateActiveLayersFeature = function (
-    layerObj,
-    addSubLayersIds,
-    delSubLayersIds
-  ) {
-    throw "Not implemented";
+  var updateActiveLayersFeature = function (layerObj, addSubLayersIds, delSubLayersIds) {
+    throw 'Not implemented';
   };
 
   return {
@@ -625,7 +561,7 @@ function EsriProvider(map) {
     },
 
     updateActiveLayers: function (layerObj, addSubLayersIds, delSubLayersIds) {
-      if (layerObj.type === "esriDynamic") {
+      if (layerObj.type === 'esriDynamic') {
         updateActiveLayersDynamic(layerObj, addSubLayersIds, delSubLayersIds);
       } else {
         updateActiveLayersFeature(layerObj, addSubLayersIds, delSubLayersIds);
@@ -641,7 +577,7 @@ function LeafletProvider(map) {
   var buildNode = function (layerNode) {
     var node = {};
     node.id = layerNode.id;
-    node.type = "node";
+    node.type = 'node';
     node.label = layerNode.name;
     node.children = [];
     node.parentId = layerNode.parentId;
@@ -669,7 +605,7 @@ function LeafletProvider(map) {
 
     var leaf = {};
     leaf.id = layer.id;
-    leaf.type = "leaf";
+    leaf.type = 'leaf';
     leaf.label = layer.name;
     leaf.legend = legend;
     leaf.parentId = layer.parentId;
@@ -702,16 +638,16 @@ function LeafletProvider(map) {
 
   var getLegend = function (layer) {
     if (layer._url !== undefined) {
-			var serviceLayers = "";
-			if (layer.wmsParams) {
-				serviceLayers = layer.wmsParams.layers
-			}
-			
+      var serviceLayers = '';
+      if (layer.wmsParams) {
+        serviceLayers = layer.wmsParams.layers;
+      }
+
       var url = new URL(layer._url);
-			url.searchParams.set("service", "WMS");
-      url.searchParams.set("request", "GetLegendGraphic");
-      url.searchParams.set("format", "image/png");
-      url.searchParams.set("layer", serviceLayers);
+      url.searchParams.set('service', 'WMS');
+      url.searchParams.set('request', 'GetLegendGraphic');
+      url.searchParams.set('format', 'image/png');
+      url.searchParams.set('layer', serviceLayers);
 
       var legend = {};
       legend.largeImageUrl = `${url.toString()}`;
