@@ -38,7 +38,7 @@ L.Control.LayerTreeControl = L.Control.extend({
 
       // esriDynamic type
       if (layerObj.type === 'esriDynamic') {
-        // this._map.addLayer(layerObj.layer);
+        this._map.addLayer(layerObj.layer);
         esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
           treeLeaf = treeLeafUI.render(layersTree, treeContainer);
         });
