@@ -285,8 +285,7 @@ function TreeLeafUI(layerManager) {
   };
 
   var addTreeNode = function (container) {
-    var img = L.DomUtil.create('img', 'tree-icon', container);
-    img.src = 'images/plus.svg';
+    var img = L.DomUtil.create('div', 'tree-icon plus', container);
     img.alt = 'plus';
   };
 
@@ -306,7 +305,8 @@ function TreeLeafUI(layerManager) {
     var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
     if (iconNode) {
       L.DomUtil.removeClass(childrenNode, 'hidden');
-      iconNode.src = 'images/minus.svg';
+      L.DomUtil.addClass(iconNode, 'minus');
+      L.DomUtil.removeClass(iconNode, 'plus');
     }
   };
 
@@ -314,7 +314,8 @@ function TreeLeafUI(layerManager) {
     var iconNode = treeNode.getElementsByClassName('tree-icon')[0];
     var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
     L.DomUtil.addClass(childrenNode, 'hidden');
-    iconNode.src = 'images/plus.svg';
+    L.DomUtil.addClass(iconNode, 'plus');
+    L.DomUtil.removeClass(iconNode, 'minus');
   };
 
   var navigateTree = function (mainLayerId, node, container, level = 1) {
