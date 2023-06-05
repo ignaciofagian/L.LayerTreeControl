@@ -10,11 +10,52 @@ L.Control.LayerTreeControl = L.Control.extend({
     this._layers = layers;
   },
 
+  addLayer: function (layerObj) {
+
+    this._layers.push(layerObj);
+    const layerId = L.stamp(layerObj);
+    const layerName = layerObj.name;
+    var treeLeafUI = this._treeLeafUI;
+    const esriProvider = this._esriProvider;
+    const leafletProvider = this._leafletProvider;
+    const treeContainer = this._treeContainer;
+
+    // esriDynamic type
+    if (layerObj.type === 'esriDynamic') {
+      this._map.addLayer(layerObj.layer);
+      esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
+        treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+      });
+    }
+    // leaflet type
+    else if (layerObj.type === 'leaflet') {
+      var opts = {};
+      if (layerObj.children || layerObj.legend) {
+        opts.children = layerObj.children;
+        opts.legend = layerObj.legend;
+      } else {
+        opts = layerObj.layer.options;
+        opts.layer = layerObj.layer;
+      }
+
+      leafletProvider.getTree(layerId, layerName, opts).then(function (layersTree) {
+        treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+      });
+    }
+    // esriFeature type
+    else if (layerObj.type === 'esriFeature') {
+      this._map.addLayer(layerObj.layer);
+      esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
+        treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+      });
+    }
+  },
+
   onAdd: function (map) {
     var container = L.DomUtil.create('div', 'layer-tree-control');
-    var treeContainer = L.DomUtil.create('div', '', container);
-    var esriProvider = new EsriProvider(map);
-    var leafletProvider = new LeafletProvider(map);
+    this._treeContainer = L.DomUtil.create('div', '', container);
+    this._esriProvider = new EsriProvider(map);
+    this._leafletProvider = new LeafletProvider(map);
 
     this._map = map;
     this._container = container;
@@ -24,47 +65,17 @@ L.Control.LayerTreeControl = L.Control.extend({
     L.DomEvent.on(container, 'wheel', L.DomEvent.stopPropagation);
 
     var providers = {
-      esri: esriProvider,
-      leaflet: leafletProvider,
+      esri: this._esriProvider,
+      leaflet: this._leafletProvider,
     };
 
     var layerManager = new LayerManager(this._layers, providers, map);
     var treeLeafUI = new TreeLeafUI(layerManager);
+    this._treeLeafUI = treeLeafUI;
 
     for (var i in this._layers) {
       const layerObj = this._layers[i];
-      const layerId = L.stamp(layerObj);
-      const layerName = layerObj.name;
-
-      // esriDynamic type
-      if (layerObj.type === 'esriDynamic') {
-        this._map.addLayer(layerObj.layer);
-        esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
-          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-        });
-      }
-      // leaflet type
-      else if (this._layers[i].type === 'leaflet') {
-        var opts = {};
-        if (layerObj.children || layerObj.legend) {
-          opts.children = layerObj.children;
-          opts.legend = layerObj.legend;
-        } else {
-          opts = layerObj.layer.options;
-          opts.layer = layerObj.layer;
-        }
-
-        leafletProvider.getTree(layerId, layerName, opts).then(function (layersTree) {
-          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-        });
-      }
-      // esriFeature type
-      else if (layerObj.type === 'esriFeature') {
-        this._map.addLayer(layerObj.layer);
-        esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
-          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-        });
-      }
+      this.addLayer(layerObj);
     }
 
     return this._container;
