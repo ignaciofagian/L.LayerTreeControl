@@ -3,6 +3,7 @@ L.Control.LayerTreeControl = L.Control.extend({
   _layers: null,
   options: {
     position: 'topright',
+    renderLegends: true,
   },
   initialize: function (layers, options) {
     L.Util.setOptions(this, options);
@@ -70,7 +71,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     };
 
     var layerManager = new LayerManager(this._layers, providers, map);
-    var treeLeafUI = new TreeLeafUI(layerManager);
+    var treeLeafUI = new TreeLeafUI(layerManager, this.options.renderLegends);
     this._treeLeafUI = treeLeafUI;
 
     for (var i in this._layers) {
@@ -169,7 +170,7 @@ function LayerManager(layers, providers, map) {
     } else findInNode = layerNode;
 
     var allCheckboxes = findInNode.querySelectorAll('.check-box');
-    var layersOff = [];
+    var layersOff = [nodeId];
 
     for (var i = 0; i < allCheckboxes.length; i++) {
       var checkbox = allCheckboxes[i];
@@ -212,7 +213,7 @@ function LayerManager(layers, providers, map) {
 /**
  * Render UI elements, require a normalized tree
  */
-function TreeLeafUI(layerManager) {
+function TreeLeafUI(layerManager, renderLegends) {
   var addCheckBox = function (node, mainLayerId, container) {
     var wrapper = L.DomUtil.create('label', 'tree-check', container);
     var checkbox = L.DomUtil.create('input', 'check-box', wrapper);
@@ -221,7 +222,7 @@ function TreeLeafUI(layerManager) {
     checkbox.type = 'checkbox';
     checkbox.itemId = node.id;
     checkbox.parentId = node.parentId !== -1 ? node.parentId : mainLayerId;
-    checkbox.value = false;
+    checkbox.checked = !!node.enabled;
 
     L.DomEvent.on(checkbox,	'change', function (event) {
         event.stopPropagation();
@@ -252,6 +253,7 @@ function TreeLeafUI(layerManager) {
 
   var addLegend = function (legendInfo, container, level) {
     if (legendInfo === undefined) return;
+    if (!renderLegends) return;
     // legends: Array<{label, data}>
     function createLegend(legend, showLabel, dom, level) {
       var content = L.DomUtil.create('div', 'legend', dom);
@@ -463,64 +465,66 @@ function EsriProvider(map) {
     });
   };
 
-  var buildNode = function (layerNode) {
+  var buildNode = function (layerNode, initialLayerIds) {
     var node = {};
     node.id = layerNode.id;
     node.type = 'node';
     node.label = layerNode.name;
     node.children = [];
     node.parentId = layerNode.parentLayerId;
+    node.enabled = initialLayerIds[layerNode.id];
 
     return node;
   };
 
-  var buildLeaf = function (layer, legends) {
+  var buildLeaf = function (layer, legends, initialLayerIds) {
     var leaf = {};
     leaf.id = layer.id;
     leaf.type = 'leaf';
     leaf.label = layer.name;
     leaf.legend = legends[layer.id] ? legends[layer.id].legend : null;
     leaf.parentId = layer.parentLayerId;
+    leaf.enabled = initialLayerIds[layer.id];
 
     return leaf;
   };
 
-  var getTree = function (subLayers, legends, current) {
+  var getTree = function (subLayers, legends, current, initialLayerIds) {
     if (current.subLayerIds) {
       var i, child, subLayerId;
-      var node = buildNode(current);
+      var node = buildNode(current, initialLayerIds);
       var children = node.children;
       for (i = 0; i < current.subLayerIds.length; i++) {
         subLayerId = current.subLayerIds[i];
-        child = getTree(subLayers, legends, subLayers[subLayerId]);
+        child = getTree(subLayers, legends, subLayers[subLayerId], initialLayerIds);
         children.push(child);
       }
       return node;
     } else {
-      return buildLeaf(current, legends);
+      return buildLeaf(current, legends, initialLayerIds);
     }
   };
 
-  var buildMultiple = function (layerId, layerName, subLayers, legends) {
+  var buildMultiple = function (layerId, layerName, subLayers, legends, initialLayerIds) {
     var i, tree, subTree, children;
-    tree = buildNode({ name: layerName });
+    tree = buildNode({ name: layerName }, initialLayerIds);
     tree.id = layerId;
     children = tree.children;
 
     for (i = 0; i < subLayers.length; i++) {
       if (subLayers[i].parentLayerId === -1) {
-        subTree = getTree(subLayers, legends, subLayers[i]);
+        subTree = getTree(subLayers, legends, subLayers[i], initialLayerIds);
         children.push(subTree);
       }
     }
     return tree;
   };
 
-  var buildSingle = function (layerId, layerName, legends) {
+  var buildSingle = function (layerId, layerName, legends, initialLayerIds) {
     var layer = {};
     layer.id = layerId;
     layer.name = layerName;
-    var tree = buildLeaf(layer, legends);
+    var tree = buildLeaf(layer, legends, initialLayerIds);
     return tree;
   };
 
@@ -561,13 +565,19 @@ function EsriProvider(map) {
   return {
     getTree: function (layerId, layerName, options) {
       var url = options.url;
+      const initialLayerIds = {};
+      if (options.layers) {
+        for (const id of options.layers) {
+          initialLayerIds[id] = true;
+        }
+      }
       return getLayerInfo(url).then(function (layerInfo) {
         var subLayers = layerInfo.subLayers;
         var legends = layerInfo.legends;
         if (subLayers && subLayers.length > 1) {
-          return buildMultiple(layerId, layerName, subLayers, legends);
+          return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds);
         } else {
-          return buildSingle(layerId, layerName, legends);
+          return buildSingle(layerId, layerName, legends, initialLayerIds);
         }
       });
     },
