@@ -24,7 +24,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriDynamic type
     if (layerObj.type === 'esriDynamic') {
       this._map.addLayer(layerObj.layer);
-      esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
+      esriProvider.getTree(layerId, layerName, layerObj.layer).then(function (layersTree) {
         treeLeaf = treeLeafUI.render(layersTree, treeContainer);
       });
     }
@@ -441,27 +441,28 @@ function TreeLeafUI(layerManager, renderLegends) {
  * Parse esri services and return a normalized tree
  */
 function EsriProvider(map) {
-  var getService = function (url) {
+  var getService = function (url, token) {
     return L.esri.service({
       url: url,
+      token: token,
     });
   };
 
-  var getLegend = function (service) {
+  var getLegend = function (service, context) {
     return new Promise(function (resolve, reject) {
       service.get('/legend', {}, function response(err, res) {
         if (err) reject(err);
         else resolve(res);
-      });
+      }, context);
     });
   };
 
-  var getInfo = function (service) {
+  var getInfo = function (service, context) {
     return new Promise(function (resolve, reject) {
       service.get('/', {}, function response(err, res) {
         if (err) reject(err);
         else resolve(res);
-      });
+      }, context);
     });
   };
 
@@ -489,14 +490,14 @@ function EsriProvider(map) {
     return leaf;
   };
 
-  var getTree = function (subLayers, legends, current, initialLayerIds) {
+  var getTree = function (subLayers, legends, current, initialLayerIds, subLayersAsObject) {
     if (current.subLayerIds) {
       var i, child, subLayerId;
       var node = buildNode(current, initialLayerIds);
       var children = node.children;
       for (i = 0; i < current.subLayerIds.length; i++) {
         subLayerId = current.subLayerIds[i];
-        child = getTree(subLayers, legends, subLayers[subLayerId], initialLayerIds);
+        child = getTree(subLayers, legends, subLayersAsObject[subLayerId], initialLayerIds, subLayersAsObject);
         children.push(child);
       }
       return node;
@@ -505,7 +506,7 @@ function EsriProvider(map) {
     }
   };
 
-  var buildMultiple = function (layerId, layerName, subLayers, legends, initialLayerIds) {
+  var buildMultiple = function (layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject) {
     var i, tree, subTree, children;
     tree = buildNode({ name: layerName }, initialLayerIds);
     tree.id = layerId;
@@ -513,7 +514,7 @@ function EsriProvider(map) {
 
     for (i = 0; i < subLayers.length; i++) {
       if (subLayers[i].parentLayerId === -1) {
-        subTree = getTree(subLayers, legends, subLayers[i], initialLayerIds);
+        subTree = getTree(subLayers, legends, subLayers[i], initialLayerIds, subLayersAsObject);
         children.push(subTree);
       }
     }
@@ -528,10 +529,13 @@ function EsriProvider(map) {
     return tree;
   };
 
-  var getLayerInfo = function (serviceUrl) {
-    var service = getService(serviceUrl);
-    var legendsPromise = getLegend(service);
-    var infoPromise = getInfo(service);
+  var getLayerInfo = function (serviceUrl, context) {
+    // This is a little confusing, but we want to preserve either the "token" or "withCredentials" options, whichever might be used.
+    // The confusing part is that esri.Service expects token to be passed as an option, but withCrednetials to be passed in the "context" of the get request.
+    // Why that is, is unclear.
+    var service = getService(serviceUrl, context && context.options.token);
+    var legendsPromise = getLegend(service, context);
+    var infoPromise = getInfo(service, context);
 
     // wait both promises
     return Promise.all([legendsPromise, infoPromise]).then(function ([legends, info]) {
@@ -563,7 +567,8 @@ function EsriProvider(map) {
   };
 
   return {
-    getTree: function (layerId, layerName, options) {
+    getTree: function (layerId, layerName, layerObj) {
+      const options = layerObj.options;
       var url = options.url;
       const initialLayerIds = {};
       if (options.layers) {
@@ -571,11 +576,17 @@ function EsriProvider(map) {
           initialLayerIds[id] = true;
         }
       }
-      return getLayerInfo(url).then(function (layerInfo) {
+      return getLayerInfo(url, layerObj).then(function (layerInfo) {
         var subLayers = layerInfo.subLayers;
+        const subLayersAsObject = {};
+        // The previous code seemed to assume that the "id" values in the sublayers array referred to the index in the array itself.
+        // But it doesn't.
+        for (var i = 0; i < subLayers.length; i++) {
+          subLayersAsObject[subLayers[i].id] = subLayers[i];
+        }
         var legends = layerInfo.legends;
         if (subLayers && subLayers.length > 1) {
-          return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds);
+          return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject);
         } else {
           return buildSingle(layerId, layerName, legends, initialLayerIds);
         }
