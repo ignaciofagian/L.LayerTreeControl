@@ -46,7 +46,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriFeature type
     else if (layerObj.type === 'esriFeature') {
       this._map.addLayer(layerObj.layer);
-      esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
+      esriProvider.getTree(layerId, layerName, layerObj.layer).then(function (layersTree) {
         treeLeaf = treeLeafUI.render(layersTree, treeContainer);
       });
     }
@@ -578,14 +578,14 @@ function EsriProvider(map) {
       }
       return getLayerInfo(url, layerObj).then(function (layerInfo) {
         var subLayers = layerInfo.subLayers;
-        const subLayersAsObject = {};
-        // The previous code seemed to assume that the "id" values in the sublayers array referred to the index in the array itself.
-        // But it doesn't.
-        for (var i = 0; i < subLayers.length; i++) {
-          subLayersAsObject[subLayers[i].id] = subLayers[i];
-        }
         var legends = layerInfo.legends;
         if (subLayers && subLayers.length > 1) {
+          const subLayersAsObject = {};
+          // The previous code seemed to assume that the "id" values in the sublayers array referred to the index in the array itself.
+          // But it doesn't.
+          for (var i = 0; i < subLayers.length; i++) {
+            subLayersAsObject[subLayers[i].id] = subLayers[i];
+          }
           return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject);
         } else {
           return buildSingle(layerId, layerName, legends, initialLayerIds);
