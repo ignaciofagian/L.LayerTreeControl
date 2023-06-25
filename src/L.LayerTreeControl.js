@@ -230,12 +230,13 @@ function TreeLeafUI(layerManager, renderLegends) {
         var subLayerIds = [node.id];
 
         if (node.type === 'leaf' && checked) {
-          treeExpand(container.parentElement);
+          // By default when you check the box the plugin would expand the subtree. This seems super weird.
+          // treeExpand(container.parentElement);
           layerManager.turnLayersOn(mainLayerId, subLayerIds);
         } else if (node.type === 'leaf') {
           layerManager.turnLayersOff(mainLayerId, subLayerIds);
         } else if (node.type === 'node' && checked) {
-          treeExpand(container.parentElement);
+          // treeExpand(container.parentElement);
           layerManager.turnNodeOn(mainLayerId, node.id);
         } else {
           layerManager.turnNodeOff(mainLayerId, node.id);
