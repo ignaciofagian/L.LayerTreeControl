@@ -24,7 +24,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriDynamic type
     if (layerObj.type === 'esriDynamic') {
       this._map.addLayer(layerObj.layer);
-      esriProvider.getTree(layerId, layerName, layerObj.layer).then(function (layersTree) {
+      esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
         treeLeaf = treeLeafUI.render(layersTree, treeContainer);
       });
     }
@@ -46,7 +46,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriFeature type
     else if (layerObj.type === 'esriFeature') {
       this._map.addLayer(layerObj.layer);
-      esriProvider.getTree(layerId, layerName, layerObj.layer).then(function (layersTree) {
+      esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
         treeLeaf = treeLeafUI.render(layersTree, treeContainer);
       });
     }
@@ -568,12 +568,13 @@ function EsriProvider(map) {
   };
 
   return {
-    getTree: function (layerId, layerName, layerObj) {
+    getTree: function (layerId, layerName, info) {
+      const layerObj = info.layer;
       const options = layerObj.options;
       var url = options.url;
       const initialLayerIds = {};
-      if (options.layers) {
-        for (const id of options.layers) {
+      if (info.visibleLayers) {
+        for (const id of info.visibleLayers) {
           initialLayerIds[id] = true;
         }
       }
