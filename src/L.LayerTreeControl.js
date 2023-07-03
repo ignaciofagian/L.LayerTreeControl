@@ -587,6 +587,9 @@ function EsriProvider(map) {
           // But it doesn't.
           for (var i = 0; i < subLayers.length; i++) {
             subLayersAsObject[subLayers[i].id] = subLayers[i];
+            if (info.allVisible) {
+              initialLayerIds[subLayers[i].id] = true
+            }
           }
           return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject);
         } else {
