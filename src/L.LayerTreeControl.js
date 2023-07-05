@@ -578,6 +578,13 @@ function EsriProvider(map) {
           initialLayerIds[id] = true;
         }
       }
+      let enabledSublayers;
+      if (info.subLayersList) {
+        enabledSublayers = {};
+        for (const l of info.subLayersList) {
+          enabledSublayers[l.id] = true;
+        }
+      }
       return getLayerInfo(url, layerObj).then(function (layerInfo) {
         var subLayers = layerInfo.subLayers;
         var legends = layerInfo.legends;
@@ -585,7 +592,13 @@ function EsriProvider(map) {
           const subLayersAsObject = {};
           // The previous code seemed to assume that the "id" values in the sublayers array referred to the index in the array itself.
           // But it doesn't.
-          for (var i = 0; i < subLayers.length; i++) {
+          for (var i = subLayers.length -1; i >= 0; i--) {
+            if (enabledSublayers && !enabledSublayers[subLayers[i].id]) {
+              // We may be loaded from a web map that only wants to show certain sublayers as even available to choose from, let alone enabled
+              // so honor that list.
+              subLayers.splice(i, 1);
+              continue;
+            }
             subLayersAsObject[subLayers[i].id] = subLayers[i];
             if (info.allVisible) {
               initialLayerIds[subLayers[i].id] = true
