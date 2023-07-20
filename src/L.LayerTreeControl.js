@@ -14,7 +14,7 @@ L.Control.LayerTreeControl = L.Control.extend({
   addLayer: function (layerObj) {
 
     this._layers.push(layerObj);
-    const layerId = L.stamp(layerObj);
+    const layerId = 'layertree-' + L.stamp(layerObj);
     const layerName = layerObj.name;
     var treeLeafUI = this._treeLeafUI;
     const esriProvider = this._esriProvider;
@@ -24,7 +24,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriDynamic type
     if (layerObj.type === 'esriDynamic') {
       this._map.addLayer(layerObj.layer);
-      esriProvider.getTree(layerId, layerName, layerObj.layer).then(function (layersTree) {
+      esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
         treeLeaf = treeLeafUI.render(layersTree, treeContainer);
       });
     }
@@ -46,7 +46,7 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriFeature type
     else if (layerObj.type === 'esriFeature') {
       this._map.addLayer(layerObj.layer);
-      esriProvider.getTree(layerId, layerName, layerObj.layer).then(function (layersTree) {
+      esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
         treeLeaf = treeLeafUI.render(layersTree, treeContainer);
       });
     }
@@ -91,7 +91,7 @@ function LayerManager(layers, providers, map) {
     var layer;
     for (var i in layers) {
       layer = layers[i].layer;
-      if (L.stamp(layers[i]) === layerId) {
+      if ('layertree-' + L.stamp(layers[i]) === layerId) {
         return layers[i];
       }
     }
@@ -230,12 +230,13 @@ function TreeLeafUI(layerManager, renderLegends) {
         var subLayerIds = [node.id];
 
         if (node.type === 'leaf' && checked) {
-          treeExpand(container.parentElement);
+          // By default when you check the box the plugin would expand the subtree. This seems super weird.
+          // treeExpand(container.parentElement);
           layerManager.turnLayersOn(mainLayerId, subLayerIds);
         } else if (node.type === 'leaf') {
           layerManager.turnLayersOff(mainLayerId, subLayerIds);
         } else if (node.type === 'node' && checked) {
-          treeExpand(container.parentElement);
+          // treeExpand(container.parentElement);
           layerManager.turnNodeOn(mainLayerId, node.id);
         } else {
           layerManager.turnNodeOff(mainLayerId, node.id);
@@ -567,13 +568,21 @@ function EsriProvider(map) {
   };
 
   return {
-    getTree: function (layerId, layerName, layerObj) {
+    getTree: function (layerId, layerName, info) {
+      const layerObj = info.layer;
       const options = layerObj.options;
       var url = options.url;
       const initialLayerIds = {};
-      if (options.layers) {
-        for (const id of options.layers) {
+      if (info.visibleLayers) {
+        for (const id of info.visibleLayers) {
           initialLayerIds[id] = true;
+        }
+      }
+      let enabledSublayers;
+      if (info.subLayersList) {
+        enabledSublayers = {};
+        for (const l of info.subLayersList) {
+          enabledSublayers[l.id] = true;
         }
       }
       return getLayerInfo(url, layerObj).then(function (layerInfo) {
@@ -583,8 +592,17 @@ function EsriProvider(map) {
           const subLayersAsObject = {};
           // The previous code seemed to assume that the "id" values in the sublayers array referred to the index in the array itself.
           // But it doesn't.
-          for (var i = 0; i < subLayers.length; i++) {
+          for (var i = subLayers.length -1; i >= 0; i--) {
+            if (enabledSublayers && !enabledSublayers[subLayers[i].id]) {
+              // We may be loaded from a web map that only wants to show certain sublayers as even available to choose from, let alone enabled
+              // so honor that list.
+              subLayers.splice(i, 1);
+              continue;
+            }
             subLayersAsObject[subLayers[i].id] = subLayers[i];
+            if (info.allVisible) {
+              initialLayerIds[subLayers[i].id] = true
+            }
           }
           return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject);
         } else {
