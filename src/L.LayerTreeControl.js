@@ -24,8 +24,10 @@ L.Control.LayerTreeControl = L.Control.extend({
     // esriDynamic type
     if (layerObj.type === 'esriDynamic') {
       this._map.addLayer(layerObj.layer);
+      // by creating a placeholder div here, we ensure the order of layers is preserved while the data is fetched
+      const container = L.DomUtil.create('div', '', treeContainer);
       esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
-        treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+        treeLeaf = treeLeafUI.render(layersTree, container);
       });
     }
     // leaflet type
@@ -45,9 +47,11 @@ L.Control.LayerTreeControl = L.Control.extend({
     }
     // esriFeature type
     else if (layerObj.type === 'esriFeature') {
+      // by creating a placeholder div here, we ensure the order of layers is preserved while the data is fetched
+      const container = L.DomUtil.create('div', '', treeContainer);
       this._map.addLayer(layerObj.layer);
       esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
-        treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+        treeLeaf = treeLeafUI.render(layersTree, container);
       });
     }
   },
