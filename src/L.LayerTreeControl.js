@@ -3,6 +3,7 @@ L.Control.LayerTreeControl = L.Control.extend({
   _layers: null,
   options: {
     position: 'topright',
+    renderLegends: true,
   },
   initialize: function (layers, options) {
     L.Util.setOptions(this, options);
@@ -10,11 +11,56 @@ L.Control.LayerTreeControl = L.Control.extend({
     this._layers = layers;
   },
 
+  addLayer: function (layerObj) {
+
+    this._layers.push(layerObj);
+    const layerId = 'layertree-' + L.stamp(layerObj);
+    const layerName = layerObj.name;
+    var treeLeafUI = this._treeLeafUI;
+    const esriProvider = this._esriProvider;
+    const leafletProvider = this._leafletProvider;
+    const treeContainer = this._treeContainer;
+
+    // esriDynamic type
+    if (layerObj.type === 'esriDynamic') {
+      this._map.addLayer(layerObj.layer);
+      // by creating a placeholder div here, we ensure the order of layers is preserved while the data is fetched
+      const container = L.DomUtil.create('div', '', treeContainer);
+      esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
+        treeLeaf = treeLeafUI.render(layersTree, container);
+      });
+    }
+    // leaflet type
+    else if (layerObj.type === 'leaflet') {
+      var opts = {};
+      if (layerObj.children || layerObj.legend) {
+        opts.children = layerObj.children;
+        opts.legend = layerObj.legend;
+      } else {
+        opts = layerObj.layer.options;
+        opts.layer = layerObj.layer;
+      }
+
+      leafletProvider.getTree(layerId, layerName, opts).then(function (layersTree) {
+        treeLeaf = treeLeafUI.render(layersTree, treeContainer);
+      });
+    }
+    // esriFeature type
+    else if (layerObj.type === 'esriFeature') {
+      // by creating a placeholder div here, we ensure the order of layers is preserved while the data is fetched
+      const container = L.DomUtil.create('div', '', treeContainer);
+      this._map.addLayer(layerObj.layer);
+      esriProvider.getTree(layerId, layerName, layerObj).then(function (layersTree) {
+        treeLeaf = treeLeafUI.render(layersTree, container);
+      });
+    }
+  },
+
   onAdd: function (map) {
     var container = L.DomUtil.create('div', 'layer-tree-control');
-    var treeContainer = L.DomUtil.create('div', '', container);
-    var esriProvider = new EsriProvider(map);
-    var leafletProvider = new LeafletProvider(map);
+    this._treeContainer = L.DomUtil.create('div', '', container);
+    this._esriProvider = new EsriProvider(map);
+    this._leafletProvider = new LeafletProvider(map);
 
     this._map = map;
     this._container = container;
@@ -24,47 +70,17 @@ L.Control.LayerTreeControl = L.Control.extend({
     L.DomEvent.on(container, 'wheel', L.DomEvent.stopPropagation);
 
     var providers = {
-      esri: esriProvider,
-      leaflet: leafletProvider,
+      esri: this._esriProvider,
+      leaflet: this._leafletProvider,
     };
 
     var layerManager = new LayerManager(this._layers, providers, map);
-    var treeLeafUI = new TreeLeafUI(layerManager);
+    var treeLeafUI = new TreeLeafUI(layerManager, this.options.renderLegends);
+    this._treeLeafUI = treeLeafUI;
 
     for (var i in this._layers) {
       const layerObj = this._layers[i];
-      const layerId = L.stamp(layerObj);
-      const layerName = layerObj.name;
-
-      // esriDynamic type
-      if (layerObj.type === 'esriDynamic') {
-        this._map.addLayer(layerObj.layer);
-        esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
-          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-        });
-      }
-      // leaflet type
-      else if (this._layers[i].type === 'leaflet') {
-        var opts = {};
-        if (layerObj.children || layerObj.legend) {
-          opts.children = layerObj.children;
-          opts.legend = layerObj.legend;
-        } else {
-          opts = layerObj.layer.options;
-          opts.layer = layerObj.layer;
-        }
-
-        leafletProvider.getTree(layerId, layerName, opts).then(function (layersTree) {
-          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-        });
-      }
-      // esriFeature type
-      else if (layerObj.type === 'esriFeature') {
-        this._map.addLayer(layerObj.layer);
-        esriProvider.getTree(layerId, layerName, layerObj.layer.options).then(function (layersTree) {
-          treeLeaf = treeLeafUI.render(layersTree, treeContainer);
-        });
-      }
+      this.addLayer(layerObj);
     }
 
     return this._container;
@@ -79,7 +95,7 @@ function LayerManager(layers, providers, map) {
     var layer;
     for (var i in layers) {
       layer = layers[i].layer;
-      if (L.stamp(layers[i]) === layerId) {
+      if ('layertree-' + L.stamp(layers[i]) === layerId) {
         return layers[i];
       }
     }
@@ -158,7 +174,7 @@ function LayerManager(layers, providers, map) {
     } else findInNode = layerNode;
 
     var allCheckboxes = findInNode.querySelectorAll('.check-box');
-    var layersOff = [];
+    var layersOff = [nodeId];
 
     for (var i = 0; i < allCheckboxes.length; i++) {
       var checkbox = allCheckboxes[i];
@@ -201,7 +217,7 @@ function LayerManager(layers, providers, map) {
 /**
  * Render UI elements, require a normalized tree
  */
-function TreeLeafUI(layerManager) {
+function TreeLeafUI(layerManager, renderLegends) {
   var addCheckBox = function (node, mainLayerId, container) {
     var wrapper = L.DomUtil.create('label', 'tree-check', container);
     var checkbox = L.DomUtil.create('input', 'check-box', wrapper);
@@ -210,7 +226,7 @@ function TreeLeafUI(layerManager) {
     checkbox.type = 'checkbox';
     checkbox.itemId = node.id;
     checkbox.parentId = node.parentId !== -1 ? node.parentId : mainLayerId;
-    checkbox.value = false;
+    checkbox.checked = !!node.enabled;
 
     L.DomEvent.on(checkbox,	'change', function (event) {
         event.stopPropagation();
@@ -218,12 +234,13 @@ function TreeLeafUI(layerManager) {
         var subLayerIds = [node.id];
 
         if (node.type === 'leaf' && checked) {
-          treeExpand(container.parentElement);
+          // By default when you check the box the plugin would expand the subtree. This seems super weird.
+          // treeExpand(container.parentElement);
           layerManager.turnLayersOn(mainLayerId, subLayerIds);
         } else if (node.type === 'leaf') {
           layerManager.turnLayersOff(mainLayerId, subLayerIds);
         } else if (node.type === 'node' && checked) {
-          treeExpand(container.parentElement);
+          // treeExpand(container.parentElement);
           layerManager.turnNodeOn(mainLayerId, node.id);
         } else {
           layerManager.turnNodeOff(mainLayerId, node.id);
@@ -241,6 +258,7 @@ function TreeLeafUI(layerManager) {
 
   var addLegend = function (legendInfo, container, level) {
     if (legendInfo === undefined) return;
+    if (!renderLegends) return;
     // legends: Array<{label, data}>
     function createLegend(legend, showLabel, dom, level) {
       var content = L.DomUtil.create('div', 'legend', dom);
@@ -285,8 +303,7 @@ function TreeLeafUI(layerManager) {
   };
 
   var addTreeNode = function (container) {
-    var img = L.DomUtil.create('img', 'tree-icon', container);
-    img.src = 'images/plus.svg';
+    var img = L.DomUtil.create('div', 'tree-icon plus', container);
     img.alt = 'plus';
   };
 
@@ -306,7 +323,8 @@ function TreeLeafUI(layerManager) {
     var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
     if (iconNode) {
       L.DomUtil.removeClass(childrenNode, 'hidden');
-      iconNode.src = 'images/minus.svg';
+      L.DomUtil.addClass(iconNode, 'minus');
+      L.DomUtil.removeClass(iconNode, 'plus');
     }
   };
 
@@ -314,7 +332,8 @@ function TreeLeafUI(layerManager) {
     var iconNode = treeNode.getElementsByClassName('tree-icon')[0];
     var childrenNode = treeNode.getElementsByClassName('tree-children')[0];
     L.DomUtil.addClass(childrenNode, 'hidden');
-    iconNode.src = 'images/plus.svg';
+    L.DomUtil.addClass(iconNode, 'plus');
+    L.DomUtil.removeClass(iconNode, 'minus');
   };
 
   var navigateTree = function (mainLayerId, node, container, level = 1) {
@@ -427,95 +446,101 @@ function TreeLeafUI(layerManager) {
  * Parse esri services and return a normalized tree
  */
 function EsriProvider(map) {
-  var getService = function (url) {
+  var getService = function (url, token) {
     return L.esri.service({
       url: url,
+      token: token,
     });
   };
 
-  var getLegend = function (service) {
+  var getLegend = function (service, context) {
     return new Promise(function (resolve, reject) {
       service.get('/legend', {}, function response(err, res) {
         if (err) reject(err);
         else resolve(res);
-      });
+      }, context);
     });
   };
 
-  var getInfo = function (service) {
+  var getInfo = function (service, context) {
     return new Promise(function (resolve, reject) {
       service.get('/', {}, function response(err, res) {
         if (err) reject(err);
         else resolve(res);
-      });
+      }, context);
     });
   };
 
-  var buildNode = function (layerNode) {
+  var buildNode = function (layerNode, initialLayerIds) {
     var node = {};
     node.id = layerNode.id;
     node.type = 'node';
     node.label = layerNode.name;
     node.children = [];
     node.parentId = layerNode.parentLayerId;
+    node.enabled = initialLayerIds[layerNode.id];
 
     return node;
   };
 
-  var buildLeaf = function (layer, legends) {
+  var buildLeaf = function (layer, legends, initialLayerIds) {
     var leaf = {};
     leaf.id = layer.id;
     leaf.type = 'leaf';
     leaf.label = layer.name;
     leaf.legend = legends[layer.id] ? legends[layer.id].legend : null;
     leaf.parentId = layer.parentLayerId;
+    leaf.enabled = initialLayerIds[layer.id];
 
     return leaf;
   };
 
-  var getTree = function (subLayers, legends, current) {
+  var getTree = function (subLayers, legends, current, initialLayerIds, subLayersAsObject) {
     if (current.subLayerIds) {
       var i, child, subLayerId;
-      var node = buildNode(current);
+      var node = buildNode(current, initialLayerIds);
       var children = node.children;
       for (i = 0; i < current.subLayerIds.length; i++) {
         subLayerId = current.subLayerIds[i];
-        child = getTree(subLayers, legends, subLayers[subLayerId]);
+        child = getTree(subLayers, legends, subLayersAsObject[subLayerId], initialLayerIds, subLayersAsObject);
         children.push(child);
       }
       return node;
     } else {
-      return buildLeaf(current, legends);
+      return buildLeaf(current, legends, initialLayerIds);
     }
   };
 
-  var buildMultiple = function (layerId, layerName, subLayers, legends) {
+  var buildMultiple = function (layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject) {
     var i, tree, subTree, children;
-    tree = buildNode({ name: layerName });
+    tree = buildNode({ name: layerName }, initialLayerIds);
     tree.id = layerId;
     children = tree.children;
 
     for (i = 0; i < subLayers.length; i++) {
       if (subLayers[i].parentLayerId === -1) {
-        subTree = getTree(subLayers, legends, subLayers[i]);
+        subTree = getTree(subLayers, legends, subLayers[i], initialLayerIds, subLayersAsObject);
         children.push(subTree);
       }
     }
     return tree;
   };
 
-  var buildSingle = function (layerId, layerName, legends) {
+  var buildSingle = function (layerId, layerName, legends, initialLayerIds) {
     var layer = {};
     layer.id = layerId;
     layer.name = layerName;
-    var tree = buildLeaf(layer, legends);
+    var tree = buildLeaf(layer, legends, initialLayerIds);
     return tree;
   };
 
-  var getLayerInfo = function (serviceUrl) {
-    var service = getService(serviceUrl);
-    var legendsPromise = getLegend(service);
-    var infoPromise = getInfo(service);
+  var getLayerInfo = function (serviceUrl, context) {
+    // This is a little confusing, but we want to preserve either the "token" or "withCredentials" options, whichever might be used.
+    // The confusing part is that esri.Service expects token to be passed as an option, but withCrednetials to be passed in the "context" of the get request.
+    // Why that is, is unclear.
+    var service = getService(serviceUrl, context && context.options.token);
+    var legendsPromise = getLegend(service, context);
+    var infoPromise = getInfo(service, context);
 
     // wait both promises
     return Promise.all([legendsPromise, infoPromise]).then(function ([legends, info]) {
@@ -547,15 +572,45 @@ function EsriProvider(map) {
   };
 
   return {
-    getTree: function (layerId, layerName, options) {
+    getTree: function (layerId, layerName, info) {
+      const layerObj = info.layer;
+      const options = layerObj.options;
       var url = options.url;
-      return getLayerInfo(url).then(function (layerInfo) {
+      const initialLayerIds = {};
+      if (info.visibleLayers) {
+        for (const id of info.visibleLayers) {
+          initialLayerIds[id] = true;
+        }
+      }
+      let enabledSublayers;
+      if (info.subLayersList) {
+        enabledSublayers = {};
+        for (const l of info.subLayersList) {
+          enabledSublayers[l.id] = true;
+        }
+      }
+      return getLayerInfo(url, layerObj).then(function (layerInfo) {
         var subLayers = layerInfo.subLayers;
         var legends = layerInfo.legends;
         if (subLayers && subLayers.length > 1) {
-          return buildMultiple(layerId, layerName, subLayers, legends);
+          const subLayersAsObject = {};
+          // The previous code seemed to assume that the "id" values in the sublayers array referred to the index in the array itself.
+          // But it doesn't.
+          for (var i = subLayers.length -1; i >= 0; i--) {
+            if (enabledSublayers && !enabledSublayers[subLayers[i].id]) {
+              // We may be loaded from a web map that only wants to show certain sublayers as even available to choose from, let alone enabled
+              // so honor that list.
+              subLayers.splice(i, 1);
+              continue;
+            }
+            subLayersAsObject[subLayers[i].id] = subLayers[i];
+            if (info.allVisible) {
+              initialLayerIds[subLayers[i].id] = true
+            }
+          }
+          return buildMultiple(layerId, layerName, subLayers, legends, initialLayerIds, subLayersAsObject);
         } else {
-          return buildSingle(layerId, layerName, legends);
+          return buildSingle(layerId, layerName, legends, initialLayerIds);
         }
       });
     },
